@@ -222,7 +222,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        map.onDestroy()
+        // OSMDroid 的 MapView 没有 onDestroy()，无需在此调用
     }
 
     companion object {
