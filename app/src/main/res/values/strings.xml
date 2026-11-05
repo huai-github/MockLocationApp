@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">虚拟定位测试</string>
+    <string name="search_hint">输入 纬度,经度（如 39.9042,116.4074）</string>
+    <string name="btn_search">定位</string>
+    <string name="btn_start">开启虚拟定位</string>
+    <string name="btn_stop">停止虚拟定位</string>
+    <string name="btn_dev_settings">前往开发者选项设置</string>
+    <string name="coord_format">经度: %s\n纬度: %s</string>
+    <string name="status_idle">未开启</string>
+    <string name="status_running">虚拟定位进行中</string>
+    <string name="toast_perm_denied">需要定位权限才能使用</string>
+    <string name="toast_pick_first">请先在地图上选点或输入坐标</string>
+    <string name="toast_mock_not_set">请先在开发者选项中把本应用设为“模拟位置信息应用”</string>
+    <string name="dev_settings_hint">开发者选项 → 模拟位置信息应用 → 选择“虚拟定位测试”</string>
+</resources>
