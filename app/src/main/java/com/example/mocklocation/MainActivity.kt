@@ -14,10 +14,12 @@ import androidx.core.content.ContextCompat
 import com.example.mocklocation.databinding.ActivityMainBinding
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,13 +32,23 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // OSMDroid 必须在创建 MapView 前设置 userAgent
-        Configuration.getInstance().userAgentValue = packageName
+        // OSMDroid 必须在创建 MapView 前完成初始化
+        val osmConfig = Configuration.getInstance()
+        osmConfig.userAgentValue = packageName
+        // 瓦片缓存放到应用私有目录：无需外部存储权限，API29+ 也兼容，
+        // 避免默认路径不可写导致瓦片静默失败（表现为地图只剩网格）
+        val osmBase = File(cacheDir, "osmdroid")
+        osmBase.mkdirs()
+        osmConfig.osmdroidBasePath = osmBase
+        osmConfig.osmdroidTileCache = File(osmBase, "tiles")
+        osmConfig.load(this, getPreferences(Context.MODE_PRIVATE))
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         map = binding.mapView
+        // 显式指定瓦片源（OpenStreetMap 标准瓦片）
+        map.setTileSource(TileSourceFactory.MAPNIK)
         map.setMultiTouchControls(true)
         map.controller.setZoom(15.0)
         map.controller.setCenter(GeoPoint(39.9042, 116.4074)) // 默认北京
