@@ -7,7 +7,10 @@ import android.content.pm.PackageManager
 import android.location.Criteria
 import android.location.LocationManager
 import android.os.Bundle
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.Toast
+import android.widget.AdapterView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -28,6 +31,13 @@ class MainActivity : AppCompatActivity() {
     private var selectedPoint: GeoPoint? = null
     private var marker: Marker? = null
     private var running = false
+
+    // 收藏夹
+    private lateinit var favoritesManager: FavoritesManager
+    private lateinit var spinner: Spinner
+    private lateinit var favAdapter: ArrayAdapter<String>
+    private var favorites: List<Favorite> = emptyList()
+    private var refreshingSpinner = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +77,38 @@ class MainActivity : AppCompatActivity() {
         binding.btnSearch.setOnClickListener { handleInput() }
         binding.btnToggle.setOnClickListener { toggleMock() }
         binding.btnDevSettings.setOnClickListener { openDevSettings() }
+        binding.btnFavorite.setOnClickListener { saveFavorite() }
+
+        // 收藏夹初始化
+        favoritesManager = FavoritesManager(this)
+        spinner = binding.spinnerFavorites
+        favAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf())
+        favAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = favAdapter
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>, view: android.view.View?, position: Int, id: Long
+            ) {
+                if (refreshingSpinner) return
+                if (position in favorites.indices) {
+                    val f = favorites[position]
+                    setSelected(GeoPoint(f.lat, f.lng))
+                }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) {}
+        }
+        // 长按收藏项可删除
+        spinner.setOnLongClickListener {
+            val pos = spinner.selectedItemPosition
+            if (pos in favorites.indices) {
+                favoritesManager.removeAt(pos)
+                refreshFavorites()
+                Toast.makeText(this, R.string.toast_fav_deleted, Toast.LENGTH_SHORT).show()
+                true
+            } else false
+        }
+        refreshFavorites()
 
         updateUi()
     }
@@ -201,6 +243,36 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
             Toast.makeText(this, R.string.dev_settings_hint, Toast.LENGTH_LONG).show()
         }
+    }
+
+    /** 收藏当前选中的点 */
+    private fun saveFavorite() {
+        val point = selectedPoint
+        if (point == null) {
+            Toast.makeText(this, R.string.toast_fav_pick_first, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val name = "点 ${favorites.size + 1}"
+        favoritesManager.add(Favorite(name, point.latitude, point.longitude))
+        refreshFavorites()
+        Toast.makeText(this, R.string.toast_fav_saved, Toast.LENGTH_SHORT).show()
+    }
+
+    /** 重新加载收藏列表到下拉框 */
+    private fun refreshFavorites() {
+        favorites = favoritesManager.getAll()
+        val items = if (favorites.isEmpty()) {
+            mutableListOf(getString(R.string.spinner_favorites_hint))
+        } else {
+            favorites.map {
+                "${it.name}  ${"%.5f".format(it.lat)},${"%.5f".format(it.lng)}"
+            }.toMutableList()
+        }
+        refreshingSpinner = true
+        favAdapter.clear()
+        favAdapter.addAll(items)
+        favAdapter.notifyDataSetChanged()
+        spinner.post { refreshingSpinner = false }
     }
 
     private fun updateUi() {

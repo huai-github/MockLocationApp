@@ -38,15 +38,26 @@ class MockLocationService : Service() {
         lat = intent?.getDoubleExtra("lat", 0.0) ?: 0.0
         lng = intent?.getDoubleExtra("lng", 0.0) ?: 0.0
 
-        startForeground(NOTIF_ID, buildNotification())
-        provider.enable()
-        provider.setLocation(lat, lng)
+        try {
+            startForeground(NOTIF_ID, buildNotification())
+            provider.enable()
+            provider.setLocation(lat, lng)
 
-        job = scope.launch {
-            while (isActive) {
-                delay(1000)
-                provider.setLocation(lat, lng)
+            job = scope.launch {
+                while (isActive) {
+                    delay(1000)
+                    try {
+                        provider.setLocation(lat, lng)
+                    } catch (_: Exception) {
+                        // 单次注入失败静默重试，不中断服务
+                    }
+                }
             }
+        } catch (e: Exception) {
+            // 任何初始化异常（如权限/类型缺失）都优雅停止，避免进程被系统杀死
+            e.printStackTrace()
+            stopSelf()
+            return START_NOT_STICKY
         }
         return START_STICKY
     }

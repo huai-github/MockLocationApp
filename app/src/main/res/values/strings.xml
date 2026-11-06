@@ -12,4 +12,10 @@
     <string name="toast_pick_first">请先在地图上选点或输入坐标</string>
     <string name="toast_mock_not_set">请先在开发者选项中把本应用设为“模拟位置信息应用”</string>
     <string name="dev_settings_hint">开发者选项 → 模拟位置信息应用 → 选择“虚拟定位测试”</string>
+    <string name="btn_favorite">收藏当前点</string>
+    <string name="spinner_favorites_hint">收藏夹（长按可删除）</string>
+    <string name="toast_fav_saved">已收藏当前点</string>
+    <string name="toast_fav_pick_first">请先选点或输入坐标再收藏</string>
+    <string name="toast_fav_deleted">已删除该收藏</string>
+    <string name="toast_fav_empty">收藏夹为空，先收藏几个点吧</string>
 </resources>
