@@ -6,7 +6,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Criteria
 import android.location.LocationManager
+import android.location.Location
 import android.os.Bundle
+import android.os.Build
+import android.os.SystemClock
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.Toast
@@ -77,6 +80,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSearch.setOnClickListener { handleInput() }
         binding.btnToggle.setOnClickListener { toggleMock() }
         binding.btnDevSettings.setOnClickListener { openDevSettings() }
+        binding.btnSelfTest.setOnClickListener { selfTest() }
         binding.btnFavorite.setOnClickListener { saveFavorite() }
 
         // 收藏夹初始化
@@ -243,6 +247,96 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {
             Toast.makeText(this, R.string.dev_settings_hint, Toast.LENGTH_LONG).show()
         }
+    }
+
+    /**
+     * 工具自检：验证系统是否真的接收了我们注入的 mock 坐标。
+     * 先检查模拟位置权限，再临时注入一个明显的测试坐标，用 getLastKnownLocation 读回确认。
+     * 若服务正在运行，自检后重启服务恢复真实注入，避免干扰。
+     */
+    private fun selfTest() {
+        if (!ensurePermission()) {
+            binding.textDiagnostics.text = "需要定位权限才能自检，请先授权。"
+            return
+        }
+        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val sb = StringBuilder()
+        val mockOk = canMock()
+        sb.appendLine(
+            if (mockOk) "① 模拟位置权限：已授权（已在开发者选项中选为本应用）"
+            else "① 模拟位置权限：未授权（去 开发者选项 → 模拟位置信息应用 → 选本应用）"
+        )
+        if (!mockOk) {
+            binding.textDiagnostics.text = sb.toString()
+            openDevSettings()
+            return
+        }
+
+        val testLat = 0.123456
+        val testLng = 0.654321
+        try {
+            for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+                try { lm.removeTestProvider(p) } catch (_: Exception) {}
+                try {
+                    lm.addTestProvider(
+                        p, false, false, false, false,
+                        true, true, true,
+                        Criteria.POWER_LOW, Criteria.ACCURACY_FINE
+                    )
+                    lm.setTestProviderEnabled(p, true)
+                } catch (_: Exception) {}
+            }
+            val loc = Location(LocationManager.GPS_PROVIDER).apply {
+                latitude = testLat
+                longitude = testLng
+                altitude = 0.0
+                accuracy = 0.1f
+                time = System.currentTimeMillis()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
+                }
+                bearing = 0f
+                speed = 0f
+            }
+            lm.setTestProviderLocation(LocationManager.GPS_PROVIDER, loc)
+
+            val back = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            if (back != null &&
+                Math.abs(back.latitude - testLat) < 0.001 &&
+                Math.abs(back.longitude - testLng) < 0.001
+            ) {
+                val latStr = "%.4f".format(back.latitude)
+                val lngStr = "%.4f".format(back.longitude)
+                sb.appendLine(
+                    "② 系统接收 mock：成功（lat=$latStr, lng=$lngStr, isFromMock=${back.isFromMockProvider()}）"
+                )
+                sb.appendLine("结论：本工具注入功能正常。")
+                sb.appendLine("· 不检测 mock 的 App（如 Google 地图、浏览器定位）会读到虚拟位置。")
+                sb.appendLine("· 高德 / M3 会检测 isFromMock=true 并丢弃，回退真实定位（其主动反作弊，本工具不做绕过）。")
+            } else {
+                sb.appendLine("② 系统接收 mock：未读回（lastKnown 为 null 或数值不符）。")
+                sb.appendLine("可能原因：ROM 限制（部分国产系统不允许注入），或定位权限未授予。")
+            }
+        } catch (e: Exception) {
+            sb.appendLine("② 自检异常：${e.message}")
+        } finally {
+            if (running) {
+                stopService(Intent(this, MockLocationService::class.java))
+                val point = selectedPoint
+                if (point != null) {
+                    val intent = Intent(this, MockLocationService::class.java).apply {
+                        putExtra("lat", point.latitude)
+                        putExtra("lng", point.longitude)
+                    }
+                    ContextCompat.startForegroundService(this, intent)
+                }
+            } else {
+                for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
+                    try { lm.setTestProviderEnabled(p, false); lm.removeTestProvider(p) } catch (_: Exception) {}
+                }
+            }
+        }
+        binding.textDiagnostics.text = sb.toString()
     }
 
     /** 收藏当前选中的点 */

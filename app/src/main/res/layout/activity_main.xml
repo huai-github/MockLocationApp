@@ -95,5 +95,20 @@
             android:layout_height="wrap_content"
             android:text="@string/btn_dev_settings"
             android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/btnSelfTest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_self_test"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/textDiagnostics"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="12sp"
+            android:textColor="#333333" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -18,4 +18,5 @@
     <string name="toast_fav_pick_first">请先选点或输入坐标再收藏</string>
     <string name="toast_fav_deleted">已删除该收藏</string>
     <string name="toast_fav_empty">收藏夹为空，先收藏几个点吧</string>
+    <string name="btn_self_test">工具自检（验证系统是否接收 mock）</string>
 </resources>
