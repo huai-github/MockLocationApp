@@ -37,14 +37,6 @@ android {
     buildFeatures {
         viewBinding = true
     }
-
-    // 让产出的 APK 文件名带上版本号，例如 app-debug-v1.2.apk
-    applicationVariants.all {
-        outputs.all {
-            val vName = versionName ?: "1.0"
-            outputFileName = "app-debug-v$vName.apk"
-        }
-    }
 }
 
 dependencies {
